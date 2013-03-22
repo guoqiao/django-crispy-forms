@@ -1,0 +1,4 @@
+<tr {% if tr.css_id %}id="{{ tr.css_id }}"{% endif %}
+    {% if tr.css_class %}class="{{ tr.css_class }}"{% endif %} {{ tr.flat_attrs|safe }}>
+       {{ fields|safe }}
+</tr>

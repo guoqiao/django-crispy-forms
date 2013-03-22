@@ -439,7 +439,6 @@ class MultiField(LayoutObject):
         context.update({'multifield': self, 'fields_output': fields_output})
         return render_to_string(self.template, context)
 
-
 class Div(LayoutObject):
     """
     Layout object. It wraps fields in a <div>
@@ -468,6 +467,35 @@ class Div(LayoutObject):
             fields += render_field(field, form, form_style, context, template_pack=template_pack)
 
         return render_to_string(self.template, Context({'div': self, 'fields': fields}))
+
+class TR(LayoutObject):
+    """
+    Layout object. It wraps fields in a <div>
+
+    You can set `css_id` for a DOM id and `css_class` for a DOM class. Example::
+
+        TR('form_field_1', 'form_field_2', css_id='div-example', css_class='divs')
+    """
+    template = "uni_form/layout/tr.html"
+
+    def __init__(self, *fields, **kwargs):
+        self.fields = list(fields)
+
+        if hasattr(self, 'css_class') and kwargs.has_key('css_class'):
+            self.css_class += ' %s' % kwargs.pop('css_class')
+        if not hasattr(self, 'css_class'):
+            self.css_class = kwargs.pop('css_class', None)
+
+        self.css_id = kwargs.pop('css_id', '')
+        self.template = kwargs.pop('template', self.template)
+        self.flat_attrs = flatatt(kwargs)
+
+    def render(self, form, form_style, context, template_pack=TEMPLATE_PACK):
+        fields = ''
+        for field in self.fields:
+            fields += render_field(field, form, form_style, context, template_pack=template_pack)
+
+        return render_to_string(self.template, Context({'tr': self, 'fields': fields}))
 
 
 class Row(Div):
@@ -505,7 +533,6 @@ class HTML(object):
     def render(self, form, form_style, context, template_pack=TEMPLATE_PACK):
         return Template(unicode(self.html)).render(context)
 
-
 class Field(LayoutObject):
     """
     Layout object, It contains one field name, and you can add attributes to it easily.
@@ -516,6 +543,41 @@ class Field(LayoutObject):
         Field('field_name', style="color: #333;", css_class="whatever", id="field_name")
     """
     template = "%s/field.html" % TEMPLATE_PACK
+
+    def __init__(self, *args, **kwargs):
+        self.fields = list(args)
+
+        if not hasattr(self, 'attrs'):
+            self.attrs = {}
+
+        if kwargs.has_key('css_class'):
+            if 'class' in self.attrs:
+                self.attrs['class'] += " %s" % kwargs.pop('css_class')
+            else:
+                self.attrs['class'] = kwargs.pop('css_class')
+
+        self.template = kwargs.pop('template', self.template)
+
+        # We use kwargs as HTML attributes, turning data_id='test' into data-id='test'
+        self.attrs.update(dict([(k.replace('_', '-'), conditional_escape(v)) for k,v in kwargs.items()]))
+
+    def render(self, form, form_style, context, template_pack=TEMPLATE_PACK):
+        html = ''
+        for field in self.fields:
+            html += render_field(field, form, form_style, context, template=self.template, attrs=self.attrs, template_pack=template_pack)
+        return html
+
+
+class TF(LayoutObject): # field in table
+    """
+    Layout object, It contains one field name, and you can add attributes to it easily.
+    For setting class attributes, you need to use `css_class`, as `class` is a Python keyword.
+
+    Example::
+
+        TF('field_name', style="color: #333;", css_class="whatever", id="field_name")
+    """
+    template = "%s/table_field.html" % TEMPLATE_PACK
 
     def __init__(self, *args, **kwargs):
         self.fields = list(args)
